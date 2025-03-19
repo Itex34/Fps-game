@@ -4,54 +4,81 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
+#include <sstream>
 #include "Camera.hpp"
 #include "Model.hpp"
 
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
-float deltaTime = 0.0f;
-float lastFrame = 0.0f;
-bool firstMouse = true;
-bool cursorEnabled = false;
-float lastX = 400, lastY = 300;
-int screenWidth = 800, screenHeight = 600;
+
+struct GameVars {
+    float deltaTime = 0.0f;
+    float lastFrame = 0.0f;
+    bool firstMouse = true;
+    bool cursorEnabled = false;
+    float lastX = 400, lastY = 300;
+    int screenWidth = 800, screenHeight = 600;
+    int frameCount = 0;
+    float fpsTime = 0.0f;
+};
+GameVars gameVars;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
-    screenWidth = width;
-    screenHeight = height;
+    gameVars.screenWidth = width;
+    gameVars.screenHeight = height;
     glViewport(0, 0, width, height);
 }
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
-    if (cursorEnabled) return;
-    camera.processMouse(xpos, ypos);
+    if (gameVars.cursorEnabled) return;
+    camera.processMouse(xpos, ypos, gameVars.deltaTime);
 }
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-        cursorEnabled = false;
+        gameVars.cursorEnabled = false;
     }
 }
 
 void processInput(GLFWwindow* window) {
     float currentFrame = glfwGetTime();
-    deltaTime = currentFrame - lastFrame;
-    lastFrame = currentFrame;
+    gameVars.deltaTime = currentFrame - gameVars.lastFrame;
+    gameVars.lastFrame = currentFrame;
 
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) camera.processKeyboard(GLFW_KEY_W, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) camera.processKeyboard(GLFW_KEY_S, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) camera.processKeyboard(GLFW_KEY_A, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) camera.processKeyboard(GLFW_KEY_D, deltaTime);
+    std::cout << "Delta Time: " << gameVars.deltaTime << std::endl;
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) camera.processKeyboard(GLFW_KEY_W, gameVars.deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) camera.processKeyboard(GLFW_KEY_S, gameVars.deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) camera.processKeyboard(GLFW_KEY_A, gameVars.deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) camera.processKeyboard(GLFW_KEY_D, gameVars.deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) camera.processKeyboard(GLFW_KEY_SPACE, gameVars.deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) camera.processKeyboard(GLFW_KEY_C, gameVars.deltaTime);
 
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-        cursorEnabled = true;
+        gameVars.cursorEnabled = true;
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    }
+}
+
+void updateFPSCounter(GLFWwindow* window) {
+    gameVars.frameCount++;
+    float currentTime = glfwGetTime();
+    float elapsedTime = currentTime - gameVars.fpsTime;
+
+    if (elapsedTime >= 1.0f) {
+        float fps = gameVars.frameCount / elapsedTime;
+        std::stringstream ss;
+        ss << "Game window - FPS: " << fps;
+        glfwSetWindowTitle(window, ss.str().c_str());
+
+        gameVars.frameCount = 0;
+        gameVars.fpsTime = currentTime;
     }
 }
 
 int main() {
     glfwInit();
-    GLFWwindow* window = glfwCreateWindow(screenWidth, screenHeight, "Game window", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(gameVars.screenWidth, gameVars.screenHeight, "Game window", NULL, NULL);
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
@@ -108,12 +135,14 @@ int main() {
     glDeleteShader(fragmentShader);
     glEnable(GL_DEPTH_TEST);
 
+    gameVars.fpsTime = glfwGetTime();
+
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)screenWidth / (float)screenHeight, 0.1f, 100.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)gameVars.screenWidth / (float)gameVars.screenHeight, 0.1f, 100.0f);
         glm::mat4 view = camera.getViewMatrix();
         glm::mat4 modelMatrix = glm::mat4(1.0f);
 
@@ -127,6 +156,9 @@ int main() {
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
         model.draw();
+
+        updateFPSCounter(window);
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
