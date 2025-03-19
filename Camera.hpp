@@ -4,11 +4,12 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <GLFW/glfw3.h>
-
+#include <iostream>
 class Camera {
 public:
     glm::vec3 position;
     glm::vec3 front;
+    glm::vec3 XZfront;
     glm::vec3 up;
 
     float yaw;
@@ -24,7 +25,7 @@ public:
     glm::mat4 getViewMatrix();
 
     void processKeyboard(int key, float deltaTime);
-    void processMouse(double xpos, double ypos);
+    void processMouse(double xpos, double ypos, float deltaTime);
 };
 
 #endif
