@@ -51,4 +51,3 @@ private:
 };
 
 #endif // MODEL_HPP
-
